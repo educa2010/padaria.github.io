@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Padaria Delícia</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Segoe UI,system-ui;background:#fff7e6;color:#333}
+header{background:#c0392b;color:#fff;padding:1rem;position:sticky;top:0}
+nav a{margin-right:1rem;cursor:pointer;font-weight:bold}
+section{display:none;padding:2rem}
+section.ativa{display:block}
+.btn{background:#27ae60;color:#fff;padding:.8rem 1.6rem;border:none;border-radius:25px;cursor:pointer}
+input,textarea,select{
+ width:100%;padding:.6rem;margin:.4rem 0;border-radius:6px;border:1px solid #ccc
+}
+.card{background:#fff;padding:1rem;border-radius:12px;margin-bottom:1rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}
+footer{text-align:center;background:#c0392b;color:#fff;padding:1rem}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h2>🥖 Padaria Delícia</h2>
+  <nav>
+    <a onclick="show('home')">Home</a>
+    <a onclick="show('produtos')">Produtos</a>
+    <a onclick="show('checkout')">Checkout</a>
+    <a onclick="show('admin')">Admin</a>
+  </nav>
+</header>
+
+<section id="home" class="ativa">
+  <h1>Pães artesanais todos os dias</h1>
+  <button class="btn" onclick="show('produtos')">Fazer Pedido</button>
+</section>
+
+<section id="produtos">
+  <h2>Produtos</h2>
+  <div class="grid" id="lista"></div>
+</section>
+
+<section id="checkout">
+  <h2>Dados do Cliente</h2>
+
+  <input id="nome" placeholder="Nome">
+  <input id="telefone" placeholder="Telefone">
+  <input id="endereco" placeholder="Endereço">
+  <textarea id="obs" placeholder="Observações"></textarea>
+
+  <h3>Pagamento</h3>
+  <select id="pagamento">
+    <option value="PIX">PIX</option>
+  </select>
+
+  <div class="card">
+    <p><b>Chave PIX:</b> 16993699410</p>
+    <button class="btn" onclick="copiarPix()">Copiar PIX</button>
+  </div>
+
+  <button class="btn" onclick="finalizar()">Finalizar Pedido</button>
+</section>
+
+<section id="admin">
+  <h2>Painel Administrativo</h2>
+
+  <div id="login">
+    <input id="user" placeholder="Usuário">
+    <input id="pass" type="password" placeholder="Senha">
+    <button class="btn" onclick="login()">Entrar</button>
+  </div>
+
+  <div id="painel" style="display:none">
+    <h3>Pedidos Recebidos</h3>
+    <div id="pedidos"></div>
+  </div>
+</section>
+
+<footer>© 2026 - Padaria Delícia</footer>
+
+<script>
+const produtos=[
+ {id:1,nome:"Pão Francês",preco:0.5},
+ {id:2,nome:"Croissant",preco:4},
+ {id:3,nome:"Pão de Queijo",preco:1.5},
+ {id:4,nome:"Bolo",preco:15}
+];
+
+const lista=document.getElementById("lista");
+produtos.forEach(p=>{
+ lista.innerHTML+=`
+ <div class="card">
+  <h3>${p.nome}</h3>
+  <p>R$ ${p.preco.toFixed(2)}</p>
+  <button class="btn" onclick="add(${p.id})">Adicionar</button>
+ </div>`;
+});
+
+function show(id){
+ document.querySelectorAll("section").forEach(s=>s.classList.remove("ativa"));
+ document.getElementById(id).classList.add("ativa");
+}
+
+function add(id){
+ let c=JSON.parse(localStorage.getItem("cart"))||[];
+ let i=c.find(i=>i.id===id);
+ if(i)i.qtd++; else{
+  let p=produtos.find(p=>p.id===id);
+  c.push({...p,qtd:1});
+ }
+ localStorage.setItem("cart",JSON.stringify(c));
+ alert("Adicionado");
+}
+
+function copiarPix(){
+ navigator.clipboard.writeText("16993699410");
+ alert("PIX copiado!");
+}
+
+function finalizar(){
+ let cart=JSON.parse(localStorage.getItem("cart"))||[];
+ if(!cart.length)return alert("Carrinho vazio");
+
+ let pedido={
+  cliente:{
+   nome:nome.value,
+   telefone:telefone.value,
+   endereco:endereco.value,
+   obs:obs.value
+  },
+  itens:cart,
+  pagamento:"PIX",
+  data:new Date().toLocaleString()
+ };
+
+ let pedidos=JSON.parse(localStorage.getItem("pedidos"))||[];
+ pedidos.push(pedido);
+ localStorage.setItem("pedidos",JSON.stringify(pedidos));
+ localStorage.removeItem("cart");
+
+ let msg="🛒 *NOVO PEDIDO*%0A";
+ msg+=`Nome: ${pedido.cliente.nome}%0A`;
+ msg+=`Tel: ${pedido.cliente.telefone}%0A`;
+ msg+=`Endereço: ${pedido.cliente.endereco}%0A%0A`;
+
+ let total=0;
+ pedido.itens.forEach(i=>{
+  msg+=`${i.nome} x${i.qtd}%0A`;
+  total+=i.preco*i.qtd;
+ });
+ msg+=`%0ATotal: R$ ${total.toFixed(2)}%0APagamento: PIX`;
+
+ window.open(`https://wa.me/5516993699410?text=${msg}`,"_blank");
+ alert("Pedido enviado!");
+ show('home');
+}
+
+function login(){
+ if(user.value==="admin" && pass.value==="1234"){
+  document.getElementById("login").style.display="none";
+  document.getElementById("painel").style.display="block";
+  carregarPedidos();
+ }else alert("Login inválido");
+}
+
+function carregarPedidos(){
+ let pedidos=JSON.parse(localStorage.getItem("pedidos"))||[];
+ let div=document.getElementById("pedidos");
+ div.innerHTML="";
+ pedidos.forEach(p=>{
+  div.innerHTML+=`
+  <div class="card">
+   <b>${p.cliente.nome}</b><br>
+   ${p.cliente.telefone}<br>
+   ${p.cliente.endereco}<br>
+   Pagamento: ${p.pagamento}<br>
+   Data: ${p.data}
+  </div>`;
+ });
+}
+</script>
+
+</body>
+</html>
